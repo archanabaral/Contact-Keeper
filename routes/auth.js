@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const config = require("config");
+const auth = require("../middleware/auth");
 const { check, validationResult } = require("express-validator/check");
 
 const User = require("../models/User");
@@ -11,8 +12,14 @@ const router = express.Router();
 //@route   GET api/auth
 //@desc    Get logged in users
 //@access  Private
-router.get("/", (req, res) => {
-  res.send("get logged in user");
+router.get("/", auth, async (req, res) => {
+  try {
+    const user = await  User.findById(req.user.id).select("-password");
+    res.json(user);
+  } catch (err) {
+  console.log(err.message);
+  res.status(500).send("server error");
+  }
 });
 
 //@route   POST api/auth
@@ -41,23 +48,25 @@ router.post(
       if (!isMatch) {
         return res.status(400).json({ msg: "Invalid credentials" });
       }
-      const payload={
-        user:{
-          id:user.id
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+      jwt.sign(
+        payload,
+        config.get("jwtSecret"),
+        {
+          expiresIn: 360000,
+        },
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
         }
-      }
-      jwt.sign(payload , config.get('jwtSecret'), {
-        expiresIn : 360000
-      }, (err,token)=>{
-        if(err) throw err;
-        res.json({token});
-
-      })
-
-      
+      );
     } catch (err) {
-      console.log(err.message)
-      res.status(500).send('server error')
+      console.log(err.message);
+      res.status(500).send("server error");
     }
   }
 );
