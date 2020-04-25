@@ -13,6 +13,7 @@ module.exports = function (req, res, next) {
 
   try {
     const decoded = jwt.verify(token, config.get("jwtSecret")); //once token is verified payload is put into decoded
+
     req.user = decoded.user;
     next();
   } catch (err) {
